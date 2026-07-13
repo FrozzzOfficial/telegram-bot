@@ -8,7 +8,9 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-TOKEN = "8323429693:AAFBnM2u7t9QUzps_sWlz7fxA5gCckfzGSg"
+import os
+
+TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -122,6 +124,7 @@ async def profile(message: Message):
 async def unknown(message: Message):
     await message.answer("Я пока не знаю такую команду 🤔")
 
+print("TOKEN:", os.getenv("BOT_TOKEN")[:10])
 
 async def main():
     print("🤖 Бот запущен!")
