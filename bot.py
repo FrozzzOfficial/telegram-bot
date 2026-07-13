@@ -124,7 +124,7 @@ async def profile(message: Message):
 async def unknown(message: Message):
     await message.answer("Я пока не знаю такую команду 🤔")
 
-print("TOKEN:", os.getenv("BOT_TOKEN")[:10])
+print("TOKEN EXISTS:", os.getenv("BOT_TOKEN") is not None)
 
 async def main():
     print("🤖 Бот запущен!")
