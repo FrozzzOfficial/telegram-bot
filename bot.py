@@ -10,6 +10,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import FSInputFile
 
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -24,6 +25,7 @@ dp = Dispatcher()
 def main_keyboard():
     kb = ReplyKeyboardBuilder()
 
+    kb.button(text="🎭 Получить карту")
     kb.button(text="📖 Помощь")
     kb.button(text="🎲 Случайное число")
     kb.button(text="🕒 Время")
@@ -56,7 +58,8 @@ async def help_handler(message: Message):
         "• 🕒 Показывать время\n"
         "• 👤 Показывать информацию о тебе\n"
         "• 🧠 Сказать твой реальный IQ\n"
-        "• 🔢 Сказать твой реальный возраст"
+        "• 🔢 Сказать твой реальный возраст\n"
+        "• 🎭 Система карточек (бета)"
     )
 
 
@@ -147,6 +150,63 @@ async def profile(message: Message):
         f"🆔 ID: {user.id}\n"
         f"📛 Username: @{user.username}"
     )
+
+ # Карты
+@dp.message(lambda message: message.text == "🎭 Получить карту")
+async def card(message: Message):
+    number = random.randint(1, 5)
+
+    if number == 1:
+        photo = FSInputFile("cards/card1.jpg")
+        text = (
+            "🎭 <b>Карта #1</b>\n\n"
+            "📛 Silly\n"
+            "⭐ Редкость: Обычная🟢\n\n"
+            "💬 Это такая залупа не завидую те бро😭"
+        )
+
+    elif number == 2:
+        photo = FSInputFile("cards/card2.jpg")
+        text = (
+            "🎭 <b>Карта #2</b>\n\n"
+            "📛 Абоба\n"
+            "⭐ Редкость: Мифическая🔴\n\n"
+            "💬 (он сосет силли🤫)"
+        )
+
+    elif number == 3:
+        photo = FSInputFile("cards/card3.jpg")
+        text = (
+            "🎭 <b>Карта #3</b>\n\n"
+            "📛 Лемончик\n"
+            "⭐ Редкость: Эпическая🟣\n\n"
+            "💬 Месси месси месси месси месси месси и анкара месси анкара месси анкара месси анкара месси гол гол гол гол гол гол гол⚽"
+        )
+
+    elif number == 4:
+        photo = FSInputFile("cards/card4.jpg")
+        text = (
+            "🎭 <b>Карта #4</b>\n\n"
+            "📛 N*ggbear\n"
+            "⭐ Редкость: Редкая🔵\n\n"
+            "💬 ето ТОТАЛЬНО не я бро"
+        )
+
+    else:
+        photo = FSInputFile("cards/card5.jpg")
+        text = (
+            "🎭 <b>Карта #5</b>\n\n"
+            "📛 Frozzz\n"
+            "⭐ Редкость: Легендарная🟡\n\n"
+            "💬 Все же он знал секрет тун тун тун сахура..."
+        )
+
+    await message.answer_photo(
+        photo=photo,
+        caption=text,
+        parse_mode="HTML"
+    )
+        
 
 
 # Неизвестные команды
