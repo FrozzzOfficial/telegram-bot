@@ -1,14 +1,16 @@
 import asyncio
 import logging
 import random
+import os
 from datetime import datetime
+
+from aiohttp import web
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-import os
 
 TOKEN = os.getenv("BOT_TOKEN")
 
@@ -18,7 +20,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
-# Создаем клавиатуру
+# Клавиатура
 def main_keyboard():
     kb = ReplyKeyboardBuilder()
 
@@ -30,10 +32,11 @@ def main_keyboard():
     kb.button(text="🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫")
 
     kb.adjust(2)
+
     return kb.as_markup(resize_keyboard=True)
 
 
-# Команда /start
+# /start
 @dp.message(Command("start"))
 async def start(message: Message):
     await message.answer(
@@ -70,7 +73,8 @@ async def time_handler(message: Message):
     now = datetime.now().strftime("%H:%M:%S")
     await message.answer(f"🕒 Сейчас {now}")
 
- # Узнать IQ
+
+# IQ
 @dp.message(lambda message: message.text == "🧠 Узнать свой IQ")
 async def iq_handler(message: Message):
     number = random.randint(1, 160)
@@ -78,33 +82,59 @@ async def iq_handler(message: Message):
     await message.answer(f"🧠 Твой IQ: {number}")
 
     if number < 50:
-        await message.answer("Ти тупарилий ишак бля че ты тут делаешь те в детский садик завтра")
+        await message.answer(
+            "Ти тупарилий ишак бля че ты тут делаешь те в детский садик завтра"
+        )
     elif number < 100:
-        await message.answer("Ну лучше чем бля меньше 50 но все равно ты еще ишак")
+        await message.answer(
+            "Ну лучше чем бля меньше 50 но все равно ты еще ишак"
+        )
     elif number < 130:
-        await message.answer("Харош (скажи что я умнее пж😭)")
+        await message.answer(
+            "Харош (скажи что я умнее пж😭)"
+        )
     else:
-        await message.answer("Хули ты все еще тут сидишь без нобелевской премии иди в космос бля")
+        await message.answer(
+            "Хули ты все еще тут сидишь без нобелевской премии иди в космос бля"
+        )
 
- # Узнать возраст
-@dp.message(lambda message: message.text == "🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫")
+
+# Возраст
+@dp.message(
+    lambda message: message.text ==
+    "🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫"
+)
 async def age_handler(message: Message):
     number = random.randint(1, 100)
 
-    await message.answer(f"🔢 Твой настоящий возраст: {number}")
+    await message.answer(
+        f"🔢 Твой настоящий возраст: {number}"
+    )
 
     if number == 67:
-        await message.answer("Сиксевеееееееееен сиксевен, сиксевен, сиксевен, сиксевен, сиксевен, да короче я хотел песню газана сюда ебнуть но я ща другое слушаю и лень крч да но ты понял(а) рофлiк")
+        await message.answer(
+            "Сиксевен сиксевен сиксевен 😭"
+        )
     elif number < 10:
-        await message.answer("Пиривет иищак ммелкий миня звати Сосык яя аутисд")
+        await message.answer(
+            "Пиривет мелкий 😂"
+        )
     elif number < 20:
-        await message.answer("Бля как те сложно там с впром в шкiлке бля дед инсайд аа у мя жизнь сложная пиздец")
+        await message.answer(
+            "Как там школа? 🤨"
+        )
     elif number < 30:
-        await message.answer("Работу ищи чудовище бля")
+        await message.answer(
+            "Работу ищи чудовище бля"
+        )
     elif number < 50:
-        await message.answer("Все тебе нельзя больше на остров эпстеина ойой то есть секретную вечеринку🤫")
+        await message.answer(
+            "Все тебе нельзя больше на остров эпштейна 🤫"
+        )
     else:
-        await message.answer("Иди на пенсию пень ржавый бля")
+        await message.answer(
+            "Иди на пенсию пень ржавый бля"
+        )
 
 
 # Профиль
@@ -119,16 +149,65 @@ async def profile(message: Message):
     )
 
 
-# Если команда неизвестна
+# Неизвестные команды
 @dp.message()
 async def unknown(message: Message):
-    await message.answer("Я пока не знаю такую команду 🤔")
+    await message.answer(
+        "Я пока не знаю такую команду 🤔"
+    )
 
-print("TOKEN EXISTS:", os.getenv("BOT_TOKEN") is not None)
+
+# Webhook
+async def webhook(request):
+    data = await request.json()
+
+    await dp.feed_raw_update(
+        bot,
+        data
+    )
+
+    return web.Response()
+
 
 async def main():
-    print("🤖 Бот запущен!")
-    await dp.start_polling(bot)
+    print("TOKEN EXISTS:", TOKEN is not None)
+    print("🤖 Бот запускается через webhook!")
+
+    app = web.Application()
+
+    app.router.add_post(
+        "/webhook",
+        webhook
+    )
+
+    webhook_url = os.getenv("WEBHOOK_URL")
+
+    await bot.set_webhook(
+        f"{webhook_url}/webhook"
+    )
+
+    runner = web.AppRunner(app)
+
+    await runner.setup()
+
+    port = int(
+        os.getenv("PORT", 10000)
+    )
+
+    site = web.TCPSite(
+        runner,
+        "0.0.0.0",
+        port
+    )
+
+    await site.start()
+
+    print(
+        f"🌐 Сервер запущен на порту {port}"
+    )
+
+    while True:
+        await asyncio.sleep(3600)
 
 
 if __name__ == "__main__":
