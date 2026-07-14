@@ -132,7 +132,11 @@ async def iq_handler(message: Message):
     "🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫"
 )
 async def age_handler(message: Message):
-    number = random.randint(1, 100)
+    number = random.choices(
+        population=[1, 2, 3, 4, 5, 6, 7, 8],
+        weights=[60, 4, 10, 25, 4, 25, 4, 1],
+        k=1
+    )[0]
 
     await message.answer(
         f"🔢 Твой настоящий возраст: {number}"
@@ -178,11 +182,7 @@ async def profile(message: Message):
  # Карты
 @dp.message(lambda message: message.text == "🎭 Получить карту")
 async def card(message: Message):
-    number = random.choices(
-        population=[1, 2, 3, 4, 5, 6, 7, 8],
-        weights=[40, 8, 15, 25, 10, 25, 10, 2],
-        k=1
-    )[0]
+    number = random.randint(1, 8)
 
     if number == 1:
         photo = FSInputFile("cards/card1.jpg")
@@ -267,12 +267,12 @@ async def card(message: Message):
 async def cards_info(message: Message):
     await message.answer(
         "🎭 <b>Редкости карт</b>\n\n"
-        "🟢 Обычная — 40%\n"
+        "🟢 Обычная — 60%\n"
         "🔵 Редкая — 25%\n"
-        "🟣 Эпическая — 15%\n"
-        "🟡 Легендарная — 10%\n"
+        "🟣 Эпическая — 10%\n"
         "🔴 Мифическая — 8%\n"
-        "⚫ Секретная — 2%\n\n"
+        "🟡 Легендарная — 4%\n"
+        "⚫ Секретная — 1%\n\n"
         "<b>📖 Список карт</b>\n"
         "1️⃣ Silly 🟢\n"
         "2️⃣ Абоба 🔴\n"
