@@ -13,7 +13,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import FSInputFile
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-
+CARD_WEIGHTS = [60, 4, 10, 25, 4, 25, 4, 1]
 TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
@@ -179,12 +179,10 @@ async def profile(message: Message):
 @dp.message(lambda message: message.text == "🎭 Получить карту")
 async def card(message: Message):
     number = random.choices(
-    population=[1, 2, 3, 4, 5, 6, 7, 8],
-    weights=[60, 4, 10, 25, 4, 25, 4, 1],
+    range(1, 9),
+    weights=CARD_WEIGHTS,
     k=1
 )[0]
-    
-    print(number)
 
     if number == 1:
         photo = FSInputFile("cards/card1.jpg")
