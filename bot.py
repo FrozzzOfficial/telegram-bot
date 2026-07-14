@@ -11,6 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import FSInputFile
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -25,7 +26,7 @@ dp = Dispatcher()
 def main_keyboard():
     kb = ReplyKeyboardBuilder()
 
-    kb.button(text="🎭 Получить карту")
+    kb.button(text="🎭 Карты (бета)")
     kb.button(text="📖 Помощь")
     kb.button(text="🎲 Случайное число")
     kb.button(text="🕒 Время")
@@ -37,6 +38,29 @@ def main_keyboard():
 
     return kb.as_markup(resize_keyboard=True)
 
+def cards_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🎭 Получить карту")],
+            [KeyboardButton(text="📚 Редкости и карты")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+
+@dp.message(lambda message: message.text == "🎭 Карты (бета)")
+async def cards_menu(message: Message):
+    await message.answer(
+        "🎭 Меню карточек\n\nВыберите действие:",
+        reply_markup=cards_keyboard()
+    )
+
+@dp.message(lambda message: message.text == "⬅️ Назад")
+async def back(message: Message):
+    await message.answer(
+        "Главное меню",
+        reply_markup=main_keyboard()
+    )
 
 # /start
 @dp.message(Command("start"))
@@ -154,7 +178,11 @@ async def profile(message: Message):
  # Карты
 @dp.message(lambda message: message.text == "🎭 Получить карту")
 async def card(message: Message):
-    number = random.randint(1, 5)
+    number = random.choices(
+        population=[1, 2, 3, 4, 5, 6, 7, 8],
+        weights=[60, 4, 10, 25, 4, 25, 4, 1],
+        k=1
+    )[0]
 
     if number == 1:
         photo = FSInputFile("cards/card1.jpg")
@@ -192,7 +220,7 @@ async def card(message: Message):
             "💬 ето ТОТАЛЬНО не я бро"
         )
 
-    else:
+    elif number == 5:
         photo = FSInputFile("cards/card5.jpg")
         text = (
             "🎭 <b>Карта #5</b>\n\n"
@@ -201,13 +229,61 @@ async def card(message: Message):
             "💬 Все же он знал секрет тун тун тун сахура..."
         )
 
+    elif number == 6:
+        photo = FSInputFile("cards/card6.jpg")
+        text = (
+            "🎭 <b>Карта #6</b>\n\n"
+            "📛 VERITY💔\n"
+            "⭐ Редкость: Редкая🔵\n\n"
+            "💬 Секретная концовка 5 обстрелов на #@%$^ 3.."
+        )
+
+    elif number == 7:
+        photo = FSInputFile("cards/card7.jpg")
+        text = (
+            "🎭 <b>Карта #7</b>\n\n"
+            "📛 Онлайн мошеннiк\n"
+            "⭐ Редкость: Легендарная🟡\n\n"
+            "💬 Заплатi 5 рiбуксов или я подам рiпорт за авто дiхание😡"
+        )
+
+    else:
+        photo = FSInputFile("cards/card8.jpg")
+        text = (
+            "🎭 <b>Карта #8</b>\n\n"
+            "📛 Файлы эпштейна DLC\n"
+            "⭐ Редкость: Секретная⚫\n\n"
+            "💬 Ето не должно било бить тут??"
+        )
+
     await message.answer_photo(
         photo=photo,
         caption=text,
         parse_mode="HTML"
     )
         
-
+# Редкости и карты
+@dp.message(lambda message: message.text == "📚 Редкости и карты")
+async def cards_info(message: Message):
+    await message.answer(
+        "🎭 <b>Редкости карт</b>\n\n"
+        "🟢 Обычная — 40%\n"
+        "🔵 Редкая — 25%\n"
+        "🟣 Эпическая — 15%\n"
+        "🟡 Легендарная — 10%\n"
+        "🔴 Мифическая — 8%\n"
+        "⚫ Секретная — 2%\n\n"
+        "<b>📖 Список карт</b>\n"
+        "1️⃣ Silly 🟢\n"
+        "2️⃣ Абоба 🔴\n"
+        "3️⃣ Лемончик 🟣\n"
+        "4️⃣ N*ggbear 🔵\n"
+        "5️⃣ Frozzz 🟡\n"
+        "6️⃣ VERITY💔 🔵\n"
+        "7️⃣ Онлайн мошенник 🟡\n"
+        "8️⃣ Файлы эпштейна DLC ⚫",
+        parse_mode="HTML"
+    )
 
 # Неизвестные команды
 @dp.message()
