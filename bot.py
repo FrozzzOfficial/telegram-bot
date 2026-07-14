@@ -8,21 +8,24 @@ from aiohttp import web
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import (
+    Message,
+    FSInputFile,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram.types import FSInputFile
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-CARD_WEIGHTS = [60, 4, 10, 25, 4, 25, 4, 1]
 TOKEN = os.getenv("BOT_TOKEN")
+
+if not TOKEN:
+    raise ValueError("BOT_TOKEN не найден!")
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=TOKEN)
+bot = Bot(TOKEN)
 dp = Dispatcher()
 
-
-# Клавиатура
 def main_keyboard():
     kb = ReplyKeyboardBuilder()
 
@@ -38,6 +41,7 @@ def main_keyboard():
 
     return kb.as_markup(resize_keyboard=True)
 
+
 def cards_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -48,21 +52,21 @@ def cards_keyboard():
         resize_keyboard=True
     )
 
-@dp.message(lambda message: message.text == "🎭 Карты (бета)")
+@dp.message(lambda m: m.text == "🎭 Карты (бета)")
 async def cards_menu(message: Message):
     await message.answer(
-        "🎭 Меню карточек\n\nВыберите действие:",
+        "🎭 Меню карточек",
         reply_markup=cards_keyboard()
     )
 
-@dp.message(lambda message: message.text == "⬅️ Назад")
+
+@dp.message(lambda m: m.text == "⬅️ Назад")
 async def back(message: Message):
     await message.answer(
         "Главное меню",
         reply_markup=main_keyboard()
     )
 
-# /start
 @dp.message(Command("start"))
 async def start(message: Message):
     await message.answer(
@@ -72,198 +76,217 @@ async def start(message: Message):
         reply_markup=main_keyboard()
     )
 
-
-# Помощь
-@dp.message(lambda message: message.text == "📖 Помощь")
+@dp.message(lambda m: m.text == "📖 Помощь")
 async def help_handler(message: Message):
     await message.answer(
         "Я умею:\n"
         "• 🎲 Генерировать случайные числа\n"
         "• 🕒 Показывать время\n"
         "• 👤 Показывать информацию о тебе\n"
-        "• 🧠 Сказать твой реальный IQ\n"
-        "• 🔢 Сказать твой реальный возраст\n"
-        "• 🎭 Система карточек (бета)"
+        "• 🧠 Узнавать IQ\n"
+        "• 🔢 Узнавать возраст\n"
+        "• 🎭 Карточки"
     )
 
-
-# Случайное число
-@dp.message(lambda message: message.text == "🎲 Случайное число")
+@dp.message(lambda m: m.text == "🎲 Случайное число")
 async def random_number(message: Message):
-    number = random.randint(1, 100)
-    await message.answer(f"🎲 Твое число: {number}")
-
-
-# Время
-@dp.message(lambda message: message.text == "🕒 Время")
-async def time_handler(message: Message):
-    now = datetime.now().strftime("%H:%M:%S")
-    await message.answer(f"🕒 Сейчас {now}")
-
-
-# IQ
-@dp.message(lambda message: message.text == "🧠 Узнать свой IQ")
-async def iq_handler(message: Message):
-    number = random.randint(1, 160)
-
-    await message.answer(f"🧠 Твой IQ: {number}")
-
-    if number < 50:
-        await message.answer(
-            "Ти тупарилий ишак бля че ты тут делаешь те в детский садик завтра"
-        )
-    elif number < 100:
-        await message.answer(
-            "Ну лучше чем бля меньше 50 но все равно ты еще ишак"
-        )
-    elif number < 130:
-        await message.answer(
-            "Харош (скажи что я умнее пж😭)"
-        )
-    else:
-        await message.answer(
-            "Хули ты все еще тут сидишь без нобелевской премии иди в космос бля"
-        )
-
-
-# Возраст
-@dp.message(
-    lambda message: message.text ==
-    "🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫"
-)
-async def age_handler(message: Message):
-    number = random.randint(1, 100)
-
     await message.answer(
-        f"🔢 Твой настоящий возраст: {number}"
+        f"🎲 Твое число: {random.randint(1,100)}"
     )
 
-    if number == 67:
-        await message.answer(
-            "Сиксевен сиксевен сиксевен 😭"
-        )
-    elif number < 10:
-        await message.answer(
-            "Пиривет мелкий 😂"
-        )
-    elif number < 20:
-        await message.answer(
-            "Как там школа? 🤨"
-        )
-    elif number < 30:
-        await message.answer(
-            "Работу ищи чудовище бля"
-        )
-    elif number < 50:
-        await message.answer(
-            "Все тебе нельзя больше на остров эпштейна 🤫"
-        )
-    else:
-        await message.answer(
-            "Иди на пенсию пень ржавый бля"
-        )
+@dp.message(lambda m: m.text == "🕒 Время")
+async def time_handler(message: Message):
+    await message.answer(
+        f"🕒 Сейчас {datetime.now().strftime('%H:%M:%S')}"
+    )
 
-
-# Профиль
-@dp.message(lambda message: message.text == "👤 Мой профиль")
+@dp.message(lambda m: m.text == "👤 Мой профиль")
 async def profile(message: Message):
+
     user = message.from_user
+    username = f"@{user.username}" if user.username else "Нет"
 
     await message.answer(
         f"👤 Имя: {user.first_name}\n"
         f"🆔 ID: {user.id}\n"
-        f"📛 Username: @{user.username}"
+        f"📛 Username: {username}"
     )
 
- # Карты
-@dp.message(lambda message: message.text == "🎭 Получить карту")
-async def card(message: Message):
-    number = random.choices(
-    range(1, 9),
-    weights=CARD_WEIGHTS,
-    k=1
-)[0]
+@dp.message(lambda m: m.text == "🧠 Узнать свой IQ")
+async def iq_handler(message: Message):
 
-    if number == 1:
-        photo = FSInputFile("cards/card1.jpg")
-        text = (
-            "🎭 <b>Карта #1</b>\n\n"
-            "📛 Silly\n"
-            "⭐ Редкость: Обычная🟢\n\n"
-            "💬 Это такая залупа не завидую те бро😭"
-        )
+    iq = random.randint(1,160)
 
-    elif number == 2:
-        photo = FSInputFile("cards/card2.jpg")
-        text = (
-            "🎭 <b>Карта #2</b>\n\n"
-            "📛 Абоба\n"
-            "⭐ Редкость: Мифическая🔴\n\n"
-            "💬 (он сосет силли🤫)"
-        )
+    await message.answer(f"🧠 Твой IQ: {iq}")
 
-    elif number == 3:
-        photo = FSInputFile("cards/card3.jpg")
-        text = (
-            "🎭 <b>Карта #3</b>\n\n"
-            "📛 Лемончик\n"
-            "⭐ Редкость: Эпическая🟣\n\n"
-            "💬 Месси месси месси месси месси месси и анкара месси анкара месси анкара месси анкара месси гол гол гол гол гол гол гол⚽"
-        )
-
-    elif number == 4:
-        photo = FSInputFile("cards/card4.jpg")
-        text = (
-            "🎭 <b>Карта #4</b>\n\n"
-            "📛 N*ggbear\n"
-            "⭐ Редкость: Редкая🔵\n\n"
-            "💬 ето ТОТАЛЬНО не я бро"
-        )
-
-    elif number == 5:
-        photo = FSInputFile("cards/card5.jpg")
-        text = (
-            "🎭 <b>Карта #5</b>\n\n"
-            "📛 Frozzz\n"
-            "⭐ Редкость: Легендарная🟡\n\n"
-            "💬 Все же он знал секрет тун тун тун сахура..."
-        )
-
-    elif number == 6:
-        photo = FSInputFile("cards/card6.jpg")
-        text = (
-            "🎭 <b>Карта #6</b>\n\n"
-            "📛 VERITY💔\n"
-            "⭐ Редкость: Редкая🔵\n\n"
-            "💬 Секретная концовка 5 обстрелов на #@%$^ 3.."
-        )
-
-    elif number == 7:
-        photo = FSInputFile("cards/card7.jpg")
-        text = (
-            "🎭 <b>Карта #7</b>\n\n"
-            "📛 Онлайн мошеннiк\n"
-            "⭐ Редкость: Легендарная🟡\n\n"
-            "💬 Заплатi 5 рiбуксов или я подам рiпорт за авто дiхание😡"
-        )
-
+    if iq < 50:
+        await message.answer("Ти тупарилий ишак бля")
+    elif iq < 100:
+        await message.answer("Ну уже получше 😂")
+    elif iq < 130:
+        await message.answer("Харош 😎")
     else:
-        photo = FSInputFile("cards/card8.jpg")
-        text = (
-            "🎭 <b>Карта #8</b>\n\n"
-            "📛 Файлы эпштейна DLC\n"
-            "⭐ Редкость: Секретная⚫\n\n"
-            "💬 Ето не должно било бить тут??"
+        await message.answer("Иди получай Нобелевскую премию 🚀")
+
+@dp.message(lambda m: m.text == "🔢 Узнать свой настоящий возраст по таблице эпштейна 🤫")
+async def age_handler(message: Message):
+
+    age = random.randint(1,100)
+
+    await message.answer(
+        f"🔢 Твой настоящий возраст: {age}"
+    )
+
+    if age == 67:
+        await message.answer("Сиксевен 😭")
+    elif age < 10:
+        await message.answer("Пиривет мелкий 😂")
+    elif age < 20:
+        await message.answer("Как школа?")
+    elif age < 30:
+        await message.answer("Работу ищи 😂")
+    elif age < 50:
+        await message.answer("На остров уже нельзя 🤫")
+    else:
+        await message.answer("Иди на пенсию 😂")
+
+RARITY_NAMES = {
+    "common": "🟢 Обычная",
+    "rare": "🔵 Редкая",
+    "epic": "🟣 Эпическая",
+    "mythic": "🔴 Мифическая",
+    "legend": "🟡 Легендарная",
+    "secret": "⚫ Секретная"
+}
+
+CARDS = {
+    "common": [
+        {
+            "id": 1,
+            "name": "Silly",
+            "file": "cards/card1.jpg",
+            "animation": False,
+            "text": "Это такая залупа не завидую те бро😭"
+        }
+    ],
+
+    "rare": [
+        {
+            "id": 4,
+            "name": "N*ggbear",
+            "file": "cards/card4.jpg",
+            "animation": False,
+            "text": "ето ТОТАЛЬНО не я бро"
+        },
+        {
+            "id": 6,
+            "name": "VERITY💔",
+            "file": "cards/card6.jpg",
+            "animation": False,
+            "text": "Секретная концовка..."
+        }
+    ],
+
+    "epic": [
+        {
+            "id": 3,
+            "name": "Лемончик",
+            "file": "cards/card3.jpg",
+            "animation": False,
+            "text": "Месси месси⚽"
+        }
+    ],
+
+    "mythic": [
+        {
+            "id": 2,
+            "name": "Абоба",
+            "file": "cards/card2.jpg",
+            "animation": False,
+            "text": "(он сосет силли🤫)"
+        }
+    ],
+
+    "legend": [
+        {
+            "id": 5,
+            "name": "Frozzz",
+            "file": "cards/card5.jpg",
+            "animation": False,
+            "text": "Все же он знал секрет..."
+        },
+        {
+            "id": 7,
+            "name": "Онлайн мошенник",
+            "file": "cards/card7.jpg",
+            "animation": False,
+            "text": "Заплати 5 робуксов😡"
+        }
+    ],
+
+    "secret": [
+        {
+            "id": 8,
+            "name": "Файлы эпштейна DLC",
+            "file": "cards/card8.jpg",
+            "animation": False,
+            "text": "Это не должно было быть тут..."
+        },
+        {
+            "id": 9,
+            "name": "P1mple",
+            "file": "cards/card9.gif",
+            "animation": True,
+            "text": "Прафiсiонал из Адопт мi"
+        }
+    ]
+}
+
+@dp.message(lambda m: m.text == "🎭 Получить карту")
+async def card(message: Message):
+
+    rarity = random.choices(
+        population=[
+            "common",
+            "rare",
+            "epic",
+            "mythic",
+            "legend",
+            "secret"
+        ],
+        weights=[60, 25, 10, 8, 4, 1],
+        k=1
+    )[0]
+
+    card = random.choice(CARDS[rarity])
+
+    if not os.path.exists(card["file"]):
+        await message.answer(f"Файл {card['file']} не найден.")
+        return
+
+    file = FSInputFile(card["file"])
+
+    caption = (
+        f"🎭 <b>Карта #{card['id']}</b>\n\n"
+        f"📛 {card['name']}\n"
+        f"⭐ Редкость: {RARITY_NAMES[rarity]}\n\n"
+        f"💬 {card['text']}"
+    )
+
+    if card["animation"]:
+        await message.answer_animation(
+            animation=file,
+            caption=caption,
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer_photo(
+            photo=file,
+            caption=caption,
+            parse_mode="HTML"
         )
 
-    await message.answer_photo(
-        photo=photo,
-        caption=text,
-        parse_mode="HTML"
-    )
-        
-# Редкости и карты
-@dp.message(lambda message: message.text == "📚 Редкости и карты")
+@dp.message(lambda m: m.text == "📚 Редкости и карты")
 async def cards_info(message: Message):
     await message.answer(
         "🎭 <b>Редкости карт</b>\n\n"
@@ -281,16 +304,15 @@ async def cards_info(message: Message):
         "5️⃣ Frozzz 🟡\n"
         "6️⃣ VERITY💔 🔵\n"
         "7️⃣ Онлайн мошенник 🟡\n"
-        "8️⃣ Файлы эпштейна DLC ⚫",
+        "8️⃣ Файлы эпштейна DLC ⚫\n"
+        "9️⃣ P1mple ⚫",
         parse_mode="HTML"
     )
 
 # Неизвестные команды
 @dp.message()
 async def unknown(message: Message):
-    await message.answer(
-        "Я пока не знаю такую команду 🤔"
-    )
+    await message.answer("Я пока не знаю такую команду 🤔")
 
 
 # Webhook
@@ -315,6 +337,7 @@ async def main():
         "/webhook",
         webhook
     )
+    
 
     webhook_url = os.getenv("WEBHOOK_URL")
 
@@ -323,12 +346,9 @@ async def main():
     )
 
     runner = web.AppRunner(app)
-
     await runner.setup()
 
-    port = int(
-        os.getenv("PORT", 10000)
-    )
+    port = int(os.getenv("PORT", 10000))
 
     site = web.TCPSite(
         runner,
@@ -338,13 +358,15 @@ async def main():
 
     await site.start()
 
-    print(
-        f"🌐 Сервер запущен на порту {port}"
-    )
+    print(f"🌐 Сервер запущен на порту {port}")
 
-    while True:
-        await asyncio.sleep(3600)
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+webhook_url = os.getenv("WEBHOOK_URL")
+
+if not webhook_url:
+    raise ValueError("WEBHOOK_URL не найден!")
