@@ -180,7 +180,7 @@ async def profile(message: Message):
 async def card(message: Message):
     number = random.choices(
         population=[1, 2, 3, 4, 5, 6, 7, 8],
-        weights=[60, 4, 10, 25, 4, 25, 4, 1],
+        weights=[40, 8, 15, 25, 10, 25, 10, 2],
         k=1
     )[0]
 
