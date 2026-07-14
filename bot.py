@@ -183,6 +183,8 @@ async def card(message: Message):
     weights=[60, 4, 10, 25, 4, 25, 4, 1],
     k=1
 )[0]
+    
+    print(number)
 
     if number == 1:
         photo = FSInputFile("cards/card1.jpg")
