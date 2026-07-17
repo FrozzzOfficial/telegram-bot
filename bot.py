@@ -2,9 +2,15 @@ import asyncio
 import logging
 import random
 import os
-import json
 import time
-import sqlite3
+import psycopg2
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL не найден")
+
+def get_db():
+    return psycopg2.connect(DATABASE_URL)
 
 from datetime import datetime
 from html import escape
@@ -54,39 +60,24 @@ BASE_DIR = os.path.dirname(
 )
 
 
-DATA_DIR = os.path.join(
-    BASE_DIR,
-    "data"
-)
-
-
-DB_FILE = os.path.join(
-    DATA_DIR,
-    "bot.db"
-)
-
-
 COOLDOWN = 3600
 
 
 card_lock = asyncio.Lock()
 
+print("Подключение к:", DATABASE_URL.split("@")[1])
+
 def init_db():
 
-    os.makedirs(
-        DATA_DIR,
-        exist_ok=True
-    )
-
-    conn = sqlite3.connect(DB_FILE)
-
+    conn = get_db()
     cur = conn.cursor()
 
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS collections(
         user_id TEXT,
-        card_id TEXT
+        card_id TEXT,
+        PRIMARY KEY(user_id, card_id)
     )
     """)
 
@@ -94,63 +85,100 @@ def init_db():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS cooldowns(
         user_id TEXT PRIMARY KEY,
-        time INTEGER
+        time BIGINT
     )
     """)
 
 
     conn.commit()
-    conn.close()
 
+    cur.close()
+    conn.close()
 
 
 init_db()
 
+def get_collection(user_id):
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT card_id FROM collections WHERE user_id=%s",
+        (user_id,)
+    )
+
+    result = [
+        row[0]
+        for row in cur.fetchall()
+    ]
+
+    cur.close()
+    conn.close()
+
+    return result
+
+
+
+def add_card(user_id, card_id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO collections(user_id, card_id)
+        VALUES (%s, %s)
+        ON CONFLICT DO NOTHING
+    """, (user_id, str(card_id)))
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+
+
+def get_cooldown(user_id):
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT time FROM cooldowns WHERE user_id=%s",
+        (user_id,)
+    )
+
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return row[0] if row else 0
+
+
+
+def set_cooldown(user_id, value):
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO cooldowns(user_id,time)
+        VALUES(%s,%s)
+        ON CONFLICT(user_id)
+        DO UPDATE SET time=EXCLUDED.time
+        """,
+        (user_id,value)
+    )
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
 # ==========================
 # СОХРАНЕНИЕ
 # ==========================
-
-
-def load_json(path):
-
-    if not os.path.exists(path):
-        return {}
-
-    try:
-        with open(
-            path,
-            "r",
-            encoding="utf-8"
-        ) as f:
-            return json.load(f)
-
-    except Exception as e:
-        logging.error(e)
-        return {}
-
-
-
-def save_json(path, data):
-
-    os.makedirs(
-        DATA_DIR,
-        exist_ok=True
-    )
-
-    with open(
-        path,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            data,
-            f,
-            ensure_ascii=False,
-            indent=4
-        )
-
-
 
 # ==========================
 # КЛАВИАТУРЫ
@@ -728,11 +756,6 @@ async def get_card(
 
     async with card_lock:
 
-
-        
-
-
-
         rarity = random.choices(
 
             list(
@@ -755,10 +778,12 @@ async def get_card(
 
 
 
+        user_cards = get_collection(user_id)
+
         duplicate = (
             str(card["id"])
-            in get_collection(user_id)
-        )
+            in user_cards
+    )
 
 
 
@@ -873,152 +898,23 @@ async def get_card(
         user_id,
         now
     )
-def get_collection(user_id):
-
-    conn = sqlite3.connect(DB_FILE)
-
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT card_id FROM collections WHERE user_id=?",
-        (user_id,)
-    )
-
-    result = [
-        row[0]
-        for row in cur.fetchall()
-    ]
-
-    conn.close()
-
-    return result
-
-
-
-def add_card(user_id, card_id):
-
-    conn = sqlite3.connect(DB_FILE)
-
-    cur = conn.cursor()
-
-    cur.execute(
-        "INSERT INTO collections VALUES (?,?)",
-        (user_id, str(card_id))
-    )
-
-    conn.commit()
-    conn.close()
-
-
-
-def get_cooldown(user_id):
-
-    conn = sqlite3.connect(DB_FILE)
-
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT time FROM cooldowns WHERE user_id=?",
-        (user_id,)
-    )
-
-    row = cur.fetchone()
-
-    conn.close()
-
-    return row[0] if row else 0
-
-
-
-def set_cooldown(user_id, value):
-
-    conn = sqlite3.connect(DB_FILE)
-
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        INSERT INTO cooldowns(user_id,time)
-        VALUES(?,?)
-        ON CONFLICT(user_id)
-        DO UPDATE SET time=excluded.time
-        """,
-        (user_id, value)
-    )
-
-    conn.commit()
-    conn.close()
-
-
-
-
-
-# ==========================
-# СПИСОК КАРТ
-# ==========================
-
-
-@dp.message(
-    lambda m: m.text == "📚 Редкости и карты"
-)
-async def cards_info(
-    message: Message
-):
-
-
-    text = (
-        "🎭 <b>Редкости:</b>\n\n"
-        "🟢 52%\n"
-        "🔵 25%\n"
-        "🟣 10%\n"
-        "🔴 8%\n"
-        "🟡 4%\n"
-        "⚫ 1%\n\n"
-        "📚 Карты:\n\n"
-    )
-
-
-
-    for rarity, cards in CARDS.items():
-
-        text += (
-            f"{RARITY_NAMES[rarity]}\n"
-        )
-
-
-        for card in cards:
-
-            text += (
-                f"🎴 #{card['id']} "
-                f"{card['name']}\n"
-            )
-
-
-        text += "\n"
-
-
-
-    await message.answer(
-        text,
-        parse_mode="HTML"
-    )
 
 @dp.message(lambda m: m.text == "🎒 Моя коллекция")
 async def my_collection(message: Message):
 
     user_id = str(message.from_user.id)
 
-    if user_id not in collection or not get_collection(user_id):
-        await message.answer(
-            "📭 У тебя пока нет карточек."
-        )
+    cards = get_collection(user_id)
+
+    if not cards:
+        await message.answer("📭 У тебя пока нет карточек.")
         return
 
     text = "🎒 <b>Твоя коллекция</b>\n\n"
 
     owned = {}
 
-    for card_id in get_collection(user_id):
+    for card_id in cards:
         owned[card_id] = owned.get(card_id, 0) + 1
 
     for rarity in CARDS:
@@ -1037,10 +933,7 @@ async def my_collection(message: Message):
 
                 text += "\n"
 
-    text += (
-        f"\n📦 Всего карт: "
-        f"{len(get_collection(user_id))}"
-    )
+    text += f"\n📦 Всего карт: {len(cards)}"
 
     await message.answer(
         text,
@@ -1110,10 +1003,7 @@ async def show_card(
     user_id = str(message.from_user.id)
 
 
-    if (
-        user_id not in collection
-        or str(card_id) not in get_collection(user_id)
-    ):
+    if str(card_id) not in get_collection(user_id):
 
         await message.answer(
             "❌ У тебя нет этой карты."
@@ -1178,7 +1068,7 @@ async def stats(message: Message):
     user_id = str(message.from_user.id)
 
 
-    if user_id not in collection:
+    if not get_collection(user_id):
 
         await message.answer(
             "📭 Коллекция пустая."
