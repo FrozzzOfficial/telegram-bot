@@ -690,8 +690,22 @@ async def get_card(
         )
 
 
+        hours = left // 3600
+        minutes = (left % 3600) // 60
+        seconds = left % 60
+
+        time_text = ""
+
+        if hours:
+            time_text += f"{hours} ч. "
+
+        if minutes:
+            time_text += f"{minutes} мин. "
+
+        time_text += f"{seconds} сек."
+
         await message.answer(
-            f"⏳ Следующая карта через {left} секунд"
+            f"⏳ Следующая карта через {time_text}"
         )
 
         return
