@@ -23,9 +23,9 @@ from aiogram.filters import Command
 from aiogram.types import (
     Message,
     FSInputFile,
+    ReplyKeyboardMarkup,
+    KeyboardButton
 )
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 from aiogram.fsm.state import StatesGroup, State
@@ -103,12 +103,10 @@ def get_collection(user_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("""
-    SELECT card_id
-    FROM collections
-    WHERE user_id=%s
-    ORDER BY card_id::int
-    """, (user_id,))
+    cur.execute(
+        "SELECT card_id FROM collections WHERE user_id=%s",
+        (user_id,)
+    )
 
     result = [
         row[0]
@@ -125,7 +123,7 @@ def get_leaderboard(limit=10):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT user_id, COUNT(DISTINCT card_id) AS cards
+        SELECT user_id, COUNT(card_id) AS cards
         FROM collections
         GROUP BY user_id
         ORDER BY cards DESC
@@ -197,12 +195,7 @@ def set_cooldown(user_id, value):
     conn.close()
 
 
-OWNER_ID = os.getenv("OWNER_ID")
-
-if not OWNER_ID:
-    raise ValueError("OWNER_ID не найден")
-
-OWNER_ID = int(OWNER_ID)
+OWNER_ID = 6033904208
 
 # ==========================
 # СОХРАНЕНИЕ
@@ -245,51 +238,55 @@ def main_keyboard():
 
 
 def cards_keyboard():
-    kb = InlineKeyboardBuilder()
 
-    kb.button(
-        text="🃏 Получить карту",
-        callback_data="get_card"
+    return ReplyKeyboardMarkup(
+        keyboard=[
+
+            [
+                KeyboardButton(
+                    text="🎭 Получить карту"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="🎒 Моя коллекция"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="🏆 Рейтинг"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="👁 Посмотреть карту"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="📊 Статистика"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="📚 Редкости и карты"
+                )
+            ],
+
+            [
+                KeyboardButton(
+                    text="⬅️ Назад"
+                )
+            ]
+
+        ],
+        resize_keyboard=True
     )
-
-    kb.button(
-        text="🎒 Коллекция",
-        callback_data="collection"
-    )
-
-    kb.button(
-        text="🖼 Посмотреть карту",
-        callback_data="get_viewcard"
-    )
-
-    kb.button(
-        text="📚 Все карты",
-        callback_data="get_rarity"
-    )
-
-    kb.button(
-        text="📊 Статистика",
-        callback_data="stats"
-    )
-
-    kb.button(
-        text="🏆 Рейтинг",
-        callback_data="rating"
-    )
-
-    kb.button(
-        text="🎪 Арена",
-        callback_data="arena"
-    )
-
-    kb.button(
-        text="⬅️ Назад",
-        callback_data="back"
-    )
-
-    kb.adjust(2)
-
-    return kb.as_markup()
 
 
 
@@ -315,23 +312,28 @@ async def start(
         reply_markup=main_keyboard()
     )
 
-@dp.callback_query(lambda c: c.data == "back")
-async def back(callback: CallbackQuery):
-    await callback.message.delete()
 
-    await callback.message.answer(
+
+@dp.message(
+    lambda m: m.text == "⬅️ Назад"
+)
+async def back(
+    message: Message
+):
+
+    await message.answer(
         "Главное меню",
         reply_markup=main_keyboard()
     )
 
 
 
-@dp.message(lambda m: m.text == "🎭 Карты (бета)")
+@dp.message(
+    lambda m: m.text == "🎭 Карты (бета)"
+)
 async def cards_menu(
-    message: Message,
-    state: FSMContext
+    message: Message
 ):
-    await state.clear()
 
     await message.answer(
         "🎭 Меню карточек",
@@ -727,12 +729,18 @@ class ViewCard(StatesGroup):
 # ==========================
 
 
-@dp.callback_query(lambda c: c.data == "get_card")
-async def get_card(callback: CallbackQuery):
+@dp.message(
+    lambda m: m.text == "🎭 Получить карту"
+)
+async def get_card(
+    message: Message
+):
 
-    await callback.answer()
 
-    user_id = str(callback.from_user.id)
+    user_id = str(
+        message.from_user.id
+    )
+
 
     now = int(
         time.time()
@@ -766,7 +774,7 @@ async def get_card(callback: CallbackQuery):
 
         time_text += f"{seconds} сек."
 
-        await callback.message.answer(
+        await message.answer(
             f"⏳ Следующая карта через {time_text}"
         )
 
@@ -816,7 +824,7 @@ async def get_card(callback: CallbackQuery):
 
     if not os.path.exists(path):
 
-        await callback.message.answer(
+        await message.answer(
             "❌ Файл карты не найден"
         )
 
@@ -850,7 +858,7 @@ async def get_card(callback: CallbackQuery):
         if card["animation"]:
 
 
-            await callback.message.answer_animation(
+            await message.answer_animation(
 
                 animation=file,
 
@@ -864,7 +872,7 @@ async def get_card(callback: CallbackQuery):
         else:
 
 
-            await callback.message.answer_photo(
+            await message.answer_photo(
 
                 photo=file,
 
@@ -882,42 +890,57 @@ async def get_card(callback: CallbackQuery):
         logging.error(e)
 
 
-        await callback.message.answer(
+        await message.answer(
             "❌ Ошибка отправки карты"
         )
 
         return
 
-    if not duplicate:
-        add_card(user_id, card["id"])
 
-        await callback.message.answer(
+
+    if not duplicate:
+
+
+        add_card(
+            user_id,
+            card["id"]
+        )
+
+
+
+        await message.answer(
             "🎉 Новая карта добавлена в твою коллекцию!"
         )
+
+
     else:
-        await callback.message.answer(
+
+
+        await message.answer(
             "♻️ Повторка! Такая карта уже есть"
         )
 
-    # Всегда ставим кулдаун
-    set_cooldown(user_id, now)
 
-@dp.callback_query(lambda c: c.data == "collection")
-async def my_collection(callback: CallbackQuery):
 
-    await callback.answer()
+    set_cooldown(
+        user_id,
+        now
+    )
 
-    user_id = str(callback.from_user.id)
+@dp.message(lambda m: m.text == "🎒 Моя коллекция")
+async def my_collection(message: Message):
+
+    user_id = str(message.from_user.id)
 
     cards = get_collection(user_id)
 
     if not cards:
-        await callback.message.answer("📭 У тебя пока нет карточек.")
+        await message.answer("📭 У тебя пока нет карточек.")
         return
 
     text = "🎒 <b>Твоя коллекция</b>\n\n"
 
-    owned = set(cards)
+    owned = {}
 
     for card_id in cards:
         owned[card_id] = owned.get(card_id, 0) + 1
@@ -940,23 +963,25 @@ async def my_collection(callback: CallbackQuery):
 
     text += f"\n📦 Всего карт: {len(cards)}"
 
-    await callback.message.answer(
+    await message.answer(
         text,
         parse_mode="HTML"
     )
 
-@dp.callback_query(lambda c: c.data == "arena")
-async def arena(callback: CallbackQuery):
-    await callback.answer("Скоро...", show_alert=True)
 
-@dp.callback_query(lambda c: c.data == "get_viewcard")
-async def ask_card(callback: CallbackQuery, state: FSMContext):
+@dp.message(lambda m: m.text == "👁 Посмотреть карту")
+async def ask_card(
+    message: Message,
+    state: FSMContext
+):
 
-    await callback.answer()
+    await message.answer(
+        "Введите ID карты:"
+    )
 
-    await callback.message.answer("Введите ID карты:")
-
-    await state.set_state(ViewCard.waiting_id)
+    await state.set_state(
+        ViewCard.waiting_id
+    )
 
 
 @dp.message(ViewCard.waiting_id)
@@ -1065,16 +1090,15 @@ async def show_card(
 
 
 
-@dp.callback_query(lambda c: c.data == "stats")
-async def stats(callback: CallbackQuery):
+@dp.message(lambda m: m.text == "📊 Статистика")
+async def stats(message: Message):
 
-    await callback.answer()
+    user_id = str(message.from_user.id)
 
-    user_id = str(callback.from_user.id)
 
     if not get_collection(user_id):
 
-        await callback.message.answer(
+        await message.answer(
             "📭 Коллекция пустая."
         )
 
@@ -1140,17 +1164,15 @@ async def stats(callback: CallbackQuery):
     )
 
 
-    await callback.message.answer(
+    await message.answer(
         text,
         parse_mode="HTML"
     )
 
 
 
-@dp.callback_query(lambda c: c.data == "get_rarity")
-async def cards_info(callback: CallbackQuery):
-
-    await callback.answer()
+@dp.message(lambda m: m.text == "📚 Редкости и карты")
+async def cards_info(message: Message):
 
     text = (
         "🎭 <b>Редкости:</b>\n\n"
@@ -1180,22 +1202,18 @@ async def cards_info(callback: CallbackQuery):
         text += "\n"
 
 
-    await callback.message.answer(
+    await message.answer(
         text,
         parse_mode="HTML"
     )
 
-@dp.callback_query(lambda c: c.data == "rating")
-async def leaderboard(callback: CallbackQuery):
-
-    await callback.answer()
+@dp.message(lambda m: m.text == "🏆 Рейтинг")
+async def leaderboard(message: Message):
 
     top = get_leaderboard()
 
     if not top:
-        await callback.message.answer(
-            "🏆 Пока никто не собрал ни одной карты."
-        )
+        await message.answer("🏆 Пока никто не собрал ни одной карты.")
         return
 
     total_cards = sum(len(cards) for cards in CARDS.values())
@@ -1221,12 +1239,14 @@ async def leaderboard(callback: CallbackQuery):
             f"🎴 {count}/{total_cards} ({percent:.1f}%)\n\n"
         )
 
-    await callback.message.answer(
+    await message.answer(
         text,
         parse_mode="HTML"
     )
 
 from aiogram.filters import CommandObject
+
+OWNER_ID = 123456789  # твой Telegram ID
 
 @dp.message(Command("wipe"))
 async def wipe_database(
