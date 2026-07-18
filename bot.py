@@ -237,54 +237,27 @@ def main_keyboard():
 
 
 
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+
 def cards_keyboard():
+    kb = ReplyKeyboardBuilder()
 
-    return ReplyKeyboardMarkup(
-        keyboard=[
+    buttons = [
+        "🎭 Получить карту",
+        "🎒 Моя коллекция",
+        "🏆 Рейтинг",
+        "👁 Посмотреть карту",
+        "📊 Статистика",
+        "📚 Редкости и карты",
+        "⬅️ Назад"
+    ]
 
-            [
-                KeyboardButton(
-                    text="🎭 Получить карту"
-                )
-            ],
+    for button in buttons:
+        kb.button(text=button)
 
-            [
-                KeyboardButton(
-                    text="🎒 Моя коллекция"
-                )
-            ],
+    kb.adjust(2)  # По две кнопки в ряд
 
-            [
-                KeyboardButton(
-                    text="🏆 Рейтинг"
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="👁 Посмотреть карту"
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="📊 Статистика"
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="📚 Редкости и карты"
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="⬅️ Назад"
-                )
-            ]
-
-        ],
+    return kb.as_markup(
         resize_keyboard=True
     )
 
